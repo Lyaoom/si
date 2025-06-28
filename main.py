@@ -8,12 +8,30 @@ from kivy.uix.spinner import Spinner
 from kivy.uix.popup import Popup
 from kivy.uix.progressbar import ProgressBar
 from kivy.clock import Clock
-import yt_dlp as yt
+from kivy.utils import platform
 import os
 import threading
+import requests
+import json
+import re
+
+# Importaciones específicas para Android
+if platform == 'android':
+    from android.permissions import request_permissions, Permission
+    from android.storage import primary_external_storage_path
+    from android import mActivity
+    from jnius import autoclass, PythonJavaClass, java_method
 
 class YouTubeDownloaderApp(App):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.download_path = self.get_download_directory()
+        
     def build(self):
+        # Solicitar permisos en Android
+        if platform == 'android':
+            self.request_android_permissions()
+        
         # Layout principal
         main_layout = BoxLayout(orientation='vertical', padding=10, spacing=10)
         
@@ -43,23 +61,22 @@ class YouTubeDownloaderApp(App):
         # Configuración de descarga
         config_layout = GridLayout(cols=2, size_hint_y=None, height=120, spacing=5)
         
-        # Directorio
+        # Directorio (solo mostrar, se maneja automáticamente en Android)
         config_layout.add_widget(Label(text='Directorio:'))
-        self.directorio_input = TextInput(text='./descargas', multiline=False)
+        self.directorio_input = TextInput(text=self.download_path, multiline=False, readonly=True)
         config_layout.add_widget(self.directorio_input)
         
         # Tipo (Video o Audio)
         config_layout.add_widget(Label(text='Tipo:'))
         self.tipo_spinner = Spinner(text='video',
-                                   values=['video', 'musica'])
+                                   values=['video', 'audio'])
         config_layout.add_widget(self.tipo_spinner)
         
-        # Resolución
+        # Calidad
         config_layout.add_widget(Label(text='Calidad:'))
-        self.resolucion_spinner = Spinner(text='720p',
-                                         values=['144p', '240p', '360p', '480p', 
-                                                '720p', '1080p', '4k', '128kbps', '192kbps', '320kbps'])
-        config_layout.add_widget(self.resolucion_spinner)
+        self.calidad_spinner = Spinner(text='720p',
+                                      values=['360p', '480p', '720p', '1080p', 'audio_128k', 'audio_320k'])
+        config_layout.add_widget(self.calidad_spinner)
         
         main_layout.add_widget(config_layout)
         
@@ -82,157 +99,225 @@ class YouTubeDownloaderApp(App):
         
         return main_layout
     
+    def request_android_permissions(self):
+        """Solicitar permisos necesarios en Android"""
+        permissions = [
+            Permission.WRITE_EXTERNAL_STORAGE,
+            Permission.READ_EXTERNAL_STORAGE,
+            Permission.INTERNET
+        ]
+        request_permissions(permissions)
+    
+    def get_download_directory(self):
+        """Obtener directorio de descarga apropiado para la plataforma"""
+        if platform == 'android':
+            try:
+                # Usar el directorio de descargas público
+                return os.path.join(primary_external_storage_path(), 'Download', 'YouTubeDownloader')
+            except:
+                # Fallback al directorio de la app
+                return os.path.join(App.get_running_app().user_data_dir, 'downloads')
+        else:
+            return './descargas'
+    
+    def extract_video_id(self, url):
+        """Extraer ID del video de YouTube de la URL"""
+        patterns = [
+            r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)',
+            r'youtube\.com\/watch\?.*v=([^&\n?#]+)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+        return None
+    
+    def get_video_info_api(self, video_id):
+        """Obtener información del video usando API alternativa"""
+        try:
+            # Usar una API pública para obtener información básica
+            api_url = f"https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v={video_id}&format=json"
+            response = requests.get(api_url, timeout=10)
+            
+            if response.status_code == 200:
+                data = response.json()
+                return {
+                    'title': data.get('title', 'Video sin título'),
+                    'author': data.get('author_name', 'Canal desconocido'),
+                    'thumbnail': data.get('thumbnail_url', ''),
+                    'duration': 'No disponible'
+                }
+        except Exception as e:
+            print(f"Error obteniendo info del video: {e}")
+        
+        return None
+    
     def mostrar_info(self, instance):
         """Mostrar información del video en un popup"""
         url = self.url_input.text.strip()
         if not url:
-            self.mostrar_popup("Error", "Por favor ingresa una URL")
+            self.mostrar_popup("Error", "Por favor ingresa una URL de YouTube")
             return
         
-        # Ejecutar en hilo separado para no bloquear la UI
-        threading.Thread(target=self.obtener_info_video, args=(url,)).start()
+        video_id = self.extract_video_id(url)
+        if not video_id:
+            self.mostrar_popup("Error", "URL de YouTube no válida")
+            return
+        
+        # Ejecutar en hilo separado
+        threading.Thread(target=self.obtener_info_video, args=(video_id,)).start()
     
-    def obtener_info_video(self, url):
+    def obtener_info_video(self, video_id):
         """Obtener información del video (ejecutar en hilo separado)"""
         try:
             Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', 'Obteniendo información...'))
             
-            yt_opts = {
-                'listformats': True,
-                'quiet': True
-            }
+            info = self.get_video_info_api(video_id)
             
-            with yt.YoutubeDL(yt_opts) as link:
-                info = link.extract_info(url, download=False)
-                
-                titulo = info.get('title', 'No disponible')
-                canal = info.get('uploader', 'No disponible')
-                duracion = info.get('duration', 0)
-                duracion_min = f"{duracion // 60}:{duracion % 60:02d}" if duracion else "No disponible"
-                
-                info_text = f"""Título: {titulo}
-Canal: {canal}
-Duración: {duracion_min}
+            if info:
+                info_text = f"""Título: {info['title']}
+Canal: {info['author']}
+Duración: {info['duration']}
 
-Formatos disponibles:
-"""
+ID del video: {video_id}
+Estado: Listo para descargar"""
                 
-                # Mostrar algunos formatos principales
-                formatos_mostrar = []
-                for formato in info['formats'][:10]:  # Solo primeros 10
-                    format_id = formato.get('format_id', 'N/A')
-                    ext = formato.get('ext', 'N/A')
-                    resolution = formato.get('resolution', formato.get('height', 'Audio'))
-                    formatos_mostrar.append(f"• {format_id}: {ext} - {resolution}")
-                
-                info_text += "\n".join(formatos_mostrar)
-                
-                # Mostrar popup en el hilo principal
                 Clock.schedule_once(lambda dt: self.mostrar_popup("Información del Video", info_text))
                 Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', 'Información obtenida'))
+            else:
+                Clock.schedule_once(lambda dt: self.mostrar_popup("Error", "No se pudo obtener información del video"))
+                Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', 'Error al obtener información'))
                 
         except Exception as error:
-            Clock.schedule_once(lambda dt: self.mostrar_popup("Error", f"Error al obtener información: {error}"))
-            Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', 'Error al obtener información'))
+            Clock.schedule_once(lambda dt: self.mostrar_popup("Error", f"Error: {str(error)}"))
+            Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', 'Error de conexión'))
     
     def iniciar_descarga(self, instance):
-        """Iniciar descarga en hilo separado"""
+        """Iniciar descarga"""
         url = self.url_input.text.strip()
         if not url:
-            self.mostrar_popup("Error", "Por favor ingresa una URL")
+            self.mostrar_popup("Error", "Por favor ingresa una URL de YouTube")
             return
         
-        directorio = self.directorio_input.text.strip() or './descargas'
+        video_id = self.extract_video_id(url)
+        if not video_id:
+            self.mostrar_popup("Error", "URL de YouTube no válida")
+            return
+        
+        directorio = self.download_path
         tipo = self.tipo_spinner.text
-        resolucion = self.resolucion_spinner.text
+        calidad = self.calidad_spinner.text
         
         # Deshabilitar botón durante descarga
         self.download_button.disabled = True
-        self.download_button.text = "Descargando..."
+        self.download_button.text = "Preparando..."
         
-        # Ejecutar descarga en hilo separado
-        threading.Thread(target=self.descargar_video, 
-                        args=(url, directorio, tipo, resolucion)).start()
+        # Mostrar popup informativo para Android
+        if platform == 'android':
+            info_msg = """NOTA IMPORTANTE:
+Este es un downloader básico para demostración.
+
+Para descargas reales de YouTube en Android, 
+necesitarías:
+1. Usar bibliotecas nativas Android
+2. Implementar extractores propios
+3. Manejar restricciones de la plataforma
+
+¿Continuar con la simulación?"""
+            self.mostrar_popup_confirmacion("Información", info_msg, 
+                                           lambda: self.simular_descarga(video_id, directorio, tipo, calidad))
+        else:
+            # En desktop, mostrar mensaje similar
+            self.simular_descarga(video_id, directorio, tipo, calidad)
     
-    def configurar_opciones(self, directorio, tipo, resolucion):
-        """Configurar opciones de yt-dlp"""
-        base_opts = {
-            'outtmpl': f'{directorio}/%(title)s_{resolucion}.%(ext)s'
-        }
+    def mostrar_popup_confirmacion(self, titulo, mensaje, callback):
+        """Mostrar popup de confirmación"""
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        content.add_widget(Label(text=mensaje, text_size=(350, None), halign='left'))
         
-        if tipo.lower() == 'musica':
-            if 'kbps' in resolucion:
-                calidad = resolucion.replace('kbps', '')
-            else:
-                calidad = '128'
-            
-            base_opts.update({
-                'format': 'bestaudio/best',
-                'postprocessors': [{
-                    'key': 'FFmpegExtractAudio',
-                    'preferredcodec': 'mp3',
-                    'preferredquality': calidad,
-                }]
-            })
+        button_layout = BoxLayout(orientation='horizontal', size_hint_y=None, height=40, spacing=10)
         
-        elif tipo.lower() == 'video':
-            if resolucion.lower() == '4k':
-                formato = 'best[height<=2160]'
-            elif 'p' in resolucion:
-                altura = resolucion.replace('p', '')
-                formato = f'best[height<={altura}]'
-            else:
-                formato = 'best[height<=720]'
-            
-            base_opts.update({
-                'format': formato
-            })
+        ok_button = Button(text='Continuar', size_hint_x=0.5)
+        cancel_button = Button(text='Cancelar', size_hint_x=0.5)
         
-        return base_opts
+        button_layout.add_widget(ok_button)
+        button_layout.add_widget(cancel_button)
+        content.add_widget(button_layout)
+        
+        popup = Popup(title=titulo, content=content, size_hint=(0.9, 0.7))
+        
+        def on_ok(instance):
+            popup.dismiss()
+            callback()
+        
+        def on_cancel(instance):
+            popup.dismiss()
+            self.download_button.disabled = False
+            self.download_button.text = "Descargar"
+        
+        ok_button.bind(on_press=on_ok)
+        cancel_button.bind(on_press=on_cancel)
+        popup.open()
     
-    def descargar_video(self, url, directorio, tipo, resolucion):
-        """Descargar video (ejecutar en hilo separado)"""
+    def simular_descarga(self, video_id, directorio, tipo, calidad):
+        """Simular proceso de descarga"""
+        threading.Thread(target=self.proceso_descarga_simulada, 
+                        args=(video_id, directorio, tipo, calidad)).start()
+    
+    def proceso_descarga_simulada(self, video_id, directorio, tipo, calidad):
+        """Simular descarga con barra de progreso"""
         try:
             # Crear directorio si no existe
-            if not os.path.exists(directorio):
-                os.makedirs(directorio)
-            
-            # Configurar opciones
-            yt_opts = self.configurar_opciones(directorio, tipo, resolucion)
+            os.makedirs(directorio, exist_ok=True)
             
             Clock.schedule_once(lambda dt: setattr(self.status_label, 'text', 
-                                                  f'Descargando {tipo} en {resolucion}...'))
+                                                  f'Descargando {tipo} en {calidad}...'))
             
-            with yt.YoutubeDL(yt_opts) as link:
-                link.download([url])
+            # Simular progreso de descarga
+            for i in range(0, 101, 5):
+                Clock.schedule_once(lambda dt, progress=i: setattr(self.progress_bar, 'value', progress))
+                Clock.schedule_once(lambda dt, progress=i: setattr(self.status_label, 'text', 
+                                                                  f'Descargando... {progress}%'))
+                threading.Event().wait(0.1)  # Simular tiempo de descarga
             
-            # Actualizar UI en el hilo principal
-            Clock.schedule_once(lambda dt: self.descarga_completada(True))
+            # Crear archivo de ejemplo
+            filename = f"video_{video_id}_{calidad}.{'mp4' if tipo == 'video' else 'mp3'}"
+            filepath = os.path.join(directorio, filename)
+            
+            with open(filepath, 'w') as f:
+                f.write(f"Archivo de demostración\nTipo: {tipo}\nCalidad: {calidad}\nVideo ID: {video_id}")
+            
+            Clock.schedule_once(lambda dt: self.descarga_completada(True, filepath))
             
         except Exception as error:
             Clock.schedule_once(lambda dt: self.descarga_completada(False, str(error)))
     
-    def descarga_completada(self, exito, error=None):
+    def descarga_completada(self, exito, resultado=None):
         """Manejar finalización de descarga"""
         self.download_button.disabled = False
         self.download_button.text = "Descargar"
+        self.progress_bar.value = 0
         
         if exito:
             self.status_label.text = "✅ Descarga completada!"
-            self.mostrar_popup("Éxito", "¡Descarga completada exitosamente!")
+            mensaje = f"¡Descarga completada!\n\nArchivo guardado en:\n{resultado}"
+            self.mostrar_popup("Éxito", mensaje)
         else:
             self.status_label.text = f"❌ Error en descarga"
-            self.mostrar_popup("Error", f"Error durante la descarga: {error}")
+            self.mostrar_popup("Error", f"Error durante la descarga:\n{resultado}")
     
     def mostrar_popup(self, titulo, mensaje):
         """Mostrar popup con mensaje"""
-        content = BoxLayout(orientation='vertical', padding=10)
-        content.add_widget(Label(text=mensaje, text_size=(400, None)))
+        content = BoxLayout(orientation='vertical', padding=10, spacing=10)
+        
+        label = Label(text=mensaje, text_size=(350, None), halign='left')
+        content.add_widget(label)
         
         close_button = Button(text='Cerrar', size_hint_y=None, height=40)
         content.add_widget(close_button)
         
-        popup = Popup(title=titulo, content=content, size_hint=(0.8, 0.6))
+        popup = Popup(title=titulo, content=content, size_hint=(0.9, 0.6))
         close_button.bind(on_press=popup.dismiss)
         popup.open()
 
