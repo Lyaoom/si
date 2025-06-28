@@ -1,46 +1,55 @@
 [app]
-
-title = MiApp
-package.name = miapp
-package.domain = com.esteban.miapp
+# (str) Title of your application
+title = YouTube Downloader
+# (str) Package name
+package.name = ytdownloader
+# (str) Package domain (needed for android/ios packaging)
+package.domain = org.example
+# (str) Source code where the main.py live
+# Assuming you clone the GitHub repo into the project root
+source.dir = .
+# (str) Application versioning (method 1)
 version = 1.0.0
 
-# Ruta del código fuente
-source.dir = .
-source.main = main.py
-source.include_exts = py,png,jpg,kv,atlas,mp4,txt,json
+# (list) Application requirements
+# Kivy and threading are part of Python stdlib; include yt-dlp as external
+requirements = python3,kivy,yt-dlp
 
+# (str) Supported orientation (one of landscape, portrait or all)
 orientation = portrait
 
-# requirements necesarios
-requirements = python3,kivy,yt_dlp
-
-# Android SDK/NDK config
-android.minapi = 21
-android.api = 33
-android.ndk = 23b
-android.ndk_api = 21
-
-android.use_androidx = True
-android.debug = True
-
-# Permisos para almacenamiento y segundo plano
-android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,FOREGROUND_SERVICE,WAKE_LOCK,RECEIVE_BOOT_COMPLETED
-android.managed_storage = true
-
-# Arquitectura (opcional)
-# android.archs = armeabi-v7a, arm64-v8a
-
-# Carpeta de salida
-build_dir = ./.buildozer
-bin_dir = ./bin
-
-# Pantalla completa
-fullscreen = 0
-
+# (bool) Include source code in the APK
+#android.include_source = False
 
 [buildozer]
+# Force build to continue even if a requirement fails to install
+# (useful to compile even with code errors)
+requirement_fail_on_install_error = False
 
-log_level = 2
-logcat_on_launch = 1
+# (str) Path to buildozer executable if not on PATH
+#buildozer = /usr/local/bin/buildozer
+
+# (str) Log level (0 = error only, 1 = info, 2 = debug)
+log_level = 1
+
+# (int) Display warning if buildozer.spec is changed since last run
 warn_on_root = 1
+
+# Android specific
+
+# (int) Android API to use
+android.api = 31
+# (int) Minimum API your APK will support
+android.minapi = 21
+# (int) Android SDK version to use for build
+android.sdk = 20
+
+# Permissions
+android.permissions = INTERNET, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE
+
+# (str) Android entry point, default is ok
+#android.entrypoint = org.kivy.android.PythonActivity
+
+# (bool) Android private storage (default True)
+android.private_storage = True
+
