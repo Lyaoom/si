@@ -77,4 +77,4 @@ log_level = 2
 logcat_on_launch = 1
 
 # Reintentar builds fallidos automáticamente
-warn_on_root = 6
+warn_on_root = 1
