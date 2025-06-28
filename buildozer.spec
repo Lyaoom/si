@@ -1,99 +1,80 @@
 [app]
 
-# (str) Título de tu aplicación.
-title = Mi Aplicacion Si
+# Nombre de la aplicación
+title = MiApp
 
-# (str) Nombre del paquete. Debe ser único, minúsculas, sin espacios ni caracteres especiales.
-package.name = com.lyaoom.si_app
+# Nombre interno del paquete
+package.name = miapp
 
-# (str) Dominio del paquete (necesario para empaquetado Android/iOS).
-# Generalmente, es el dominio de tu organización o el tuyo propio, invertido.
-package.domain = org.lyaoom
+# Dominio inverso para identificar la app (puedes personalizarlo)
+package.domain = com.esteban.miapp
 
-# (str) Versión de la aplicación.
-version = 0.1
+# Versión de la app
+version = 1.0.0
 
-# (list) Requisitos de Python. ESTO ES CRÍTICO.
-# Enumera todas las bibliotecas de Python que tu aplicación necesita, separadas por comas.
-# Si tu app usa Kivy, Pygame, etc., inclúyelos. Si no usas ninguna GUI, 'python3' puede ser suficiente.
-# EJEMPLOS:
-# requirements = python3,kivy
-# requirements = python3,requests,numpy
-# requirements = python3,pygame
-requirements = python3,kivy
+# Archivo principal
+source.main = main.py
 
-# (str) El directorio que contiene el código fuente de tu aplicación.
-# Por defecto es el directorio actual donde se ejecuta buildozer.
-source.dir = .
+# Extensiones de archivos incluidas
+source.include_exts = py,png,jpg,kv,atlas,mp4,txt,json
 
-# (str) El archivo principal de tu aplicación (el punto de entrada).
-# Asegúrate de que este archivo exista en la raíz de tu 'source.dir'.
-main.py = main.py
-
-# (str) Orientación por defecto de tu aplicación: landscape, portrait, all.
+# Orientación de la pantalla
 orientation = portrait
 
-# (bool) Si la aplicación se ejecutará en pantalla completa (0 = no, 1 = sí).
+# Icono (puedes reemplazar con tu propio icono PNG)
+# icon.filename = %(source.dir)s/icon.png
+
+# Requisitos de Python
+requirements = python3,kivy,yt_dlp
+
+# Motor de entrada (opcional)
+# input.providers = keyboard
+
+# SDKs de Android
+android.minapi = 21
+android.api = 33
+android.ndk = 23b
+android.ndk_api = 21
+
+# Usa AndroidX (recomendado)
+android.use_androidx = True
+
+# Permisos necesarios para archivos y segundo plano
+android.permissions = INTERNET,READ_EXTERNAL_STORAGE,WRITE_EXTERNAL_STORAGE,FOREGROUND_SERVICE,WAKE_LOCK,RECEIVE_BOOT_COMPLETED
+
+# Soporte para almacenamiento gestionado (Android 11+)
+android.managed_storage = true
+
+# Desactiva log del compilador (opcional)
+# android.logcat_filters = *:S python:D
+
+# Archivos ocultos a excluir
+# source.exclude_dirs = tests, bin, .git, .vscode
+
+# Limita la arquitectura si deseas reducir tamaño
+# android.archs = arm64-v8a
+
+# Ejecutar en modo debug
+android.debug = True
+
+# Directorios de compilación
+build_dir = ./.buildozer
+bin_dir = ./bin
+
+# Modo fullscreen
 fullscreen = 0
 
-# (list) Permisos de Android que tu aplicación necesita.
-# Siempre es buena práctica incluir INTERNET si la app se conecta a la red.
-# Si tu app necesita acceder al almacenamiento, red, cámara, etc., añádelos aquí.
-# android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA
-android.permissions = INTERNET
-
-# (str) El nivel de API de Android objetivo para compilar.
-# Se recomienda usar una versión reciente y compatible. Puedes probar con 31, 32 o 33.
-android.api = 33
-
-# (int) El nivel de API mínimo de Android que tu aplicación soportará.
-# Manténlo razonablemente bajo para compatibilidad, pero no tan bajo que falten funciones.
-android.minapi = 21
-
-# (int) El nivel de API de Android con el que se compila la aplicación.
-# Suele ser el mismo que android.api o superior.
-android.targetsdk = 33
-
-# (str) La categoría de la aplicación (opcional, para tiendas de apps).
-# android.category = productivity
-
-# (list) Opciones para el Android Manifest.
-# android.extra_manifest_xml = <uses-feature android:name="android.hardware.usb.host" android:required="true" />
 
 [buildozer]
 
-# (list) Arquitecturas Android a las que apuntar.
-# 'armeabi-v7a' para dispositivos de 32 bits, 'arm64-v8a' para 64 bits.
-# Es buena práctica incluir ambas para máxima compatibilidad.
-android.archs = arm64-v8a, armeabi-v7a
+# Archivos a incluir en dist/
+# include_patterns = assets/*,images/*.png
 
-# (int) Número de procesos a usar para la compilación.
-# jobs = 1
+# Directorio para guardar compilaciones
+log_level = 2
 
-# (bool) Habilitar el modo de depuración. Genera un APK debuggeable.
-debug = True
+# Correr logcat después de ejecutar
+logcat_on_launch = 1
 
-# (bool) Si es para lanzamiento (release = True) se necesita firmar el APK y otras configuraciones.
-# Para desarrollo y pruebas, déjalo en False.
-release = False
-
-# (str) Ruta a tu archivo keystore si estás construyendo una versión de lanzamiento.
-# android.release_keystore = ~/my-release-key.keystore
-
-# (str) Alias de la clave dentro del keystore.
-# android.release_keystore_alias = my_app_alias
-
-# (str) Contraseña para el keystore (sólo si se usa release_keystore).
-# android.release_keystore_pass = your_password
-
-# (str) Contraseña para el alias (sólo si se usa release_keystore).
-# android.release_keyalias_pass = your_password
-
-# (bool) Si se deben limpiar los directorios de compilación y las herramientas antes de compilar.
-# android.clean_build = True
-
-# (bool) Si Buildozer debe usar una caché para las dependencias (más rápido en compilaciones sucesivas).
-# android.use_setup_py = True
-
-# (bool) Incluir o no los libs locales. Si tu proyecto tiene módulos locales, déjalo en True.
-# android.add_local_libs = True
+# Reintentar builds fallidos automáticamente
+warn_on_root = 6
