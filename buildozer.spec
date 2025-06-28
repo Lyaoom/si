@@ -1,85 +1,99 @@
 [app]
 
-# (str) Título de tu aplicación
-title = YouTube Downloader
+# (str) Título de tu aplicación.
+title = Mi Aplicacion Si
 
-# (str) Nombre del paquete
-package.name = youtubedownloader
+# (str) Nombre del paquete. Debe ser único, minúsculas, sin espacios ni caracteres especiales.
+package.name = com.lyaoom.si_app
 
-# (str) Dominio del paquete (usado para el ID de Android)
-package.domain = org.example
+# (str) Dominio del paquete (necesario para empaquetado Android/iOS).
+# Generalmente, es el dominio de tu organización o el tuyo propio, invertido.
+package.domain = org.lyaoom
 
-# (str) Archivo fuente principal de tu aplicación
-source.main = main.py
+# (str) Versión de la aplicación.
+version = 0.1
 
-# (list) Directorio fuente donde vive la aplicación
+# (list) Requisitos de Python. ESTO ES CRÍTICO.
+# Enumera todas las bibliotecas de Python que tu aplicación necesita, separadas por comas.
+# Si tu app usa Kivy, Pygame, etc., inclúyelos. Si no usas ninguna GUI, 'python3' puede ser suficiente.
+# EJEMPLOS:
+# requirements = python3,kivy
+# requirements = python3,requests,numpy
+# requirements = python3,pygame
+requirements = python3,kivy
+
+# (str) El directorio que contiene el código fuente de tu aplicación.
+# Por defecto es el directorio actual donde se ejecuta buildozer.
 source.dir = .
 
-# (list) Patrones de archivos a incluir (por defecto: *)
-source.include_exts = py,png,jpg,kv,atlas
+# (str) El archivo principal de tu aplicación (el punto de entrada).
+# Asegúrate de que este archivo exista en la raíz de tu 'source.dir'.
+main.py = main.py
 
-# (str) Versión de la aplicación
-version = 1.0
+# (str) Orientación por defecto de tu aplicación: landscape, portrait, all.
+orientation = portrait
 
-# (list) Requerimientos de la aplicación
-# Aquí incluyes todas las librerías que necesitas
-requirements = python3,kivy,yt-dlp,pycryptodome,websockets,brotli,certifi,urllib3,mutagen,ffmpeg-python
+# (bool) Si la aplicación se ejecutará en pantalla completa (0 = no, 1 = sí).
+fullscreen = 0
 
-# (str) Icono de la aplicación (opcional)
-#icon.filename = %(source.dir)s/icon.png
+# (list) Permisos de Android que tu aplicación necesita.
+# Siempre es buena práctica incluir INTERNET si la app se conecta a la red.
+# Si tu app necesita acceder al almacenamiento, red, cámara, etc., añádelos aquí.
+# android.permissions = INTERNET, READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE, CAMERA
+android.permissions = INTERNET
 
-# (str) Presplash de la aplicación (opcional)
-#presplash.filename = %(source.dir)s/presplash.png
+# (str) El nivel de API de Android objetivo para compilar.
+# Se recomienda usar una versión reciente y compatible. Puedes probar con 31, 32 o 33.
+android.api = 33
+
+# (int) El nivel de API mínimo de Android que tu aplicación soportará.
+# Manténlo razonablemente bajo para compatibilidad, pero no tan bajo que falten funciones.
+android.minapi = 21
+
+# (int) El nivel de API de Android con el que se compila la aplicación.
+# Suele ser el mismo que android.api o superior.
+android.targetsdk = 33
+
+# (str) La categoría de la aplicación (opcional, para tiendas de apps).
+# android.category = productivity
+
+# (list) Opciones para el Android Manifest.
+# android.extra_manifest_xml = <uses-feature android:name="android.hardware.usb.host" android:required="true" />
 
 [buildozer]
 
-# (int) Nivel de log (0 = solo errores, 1 = info, 2 = debug)
-log_level = 2
+# (list) Arquitecturas Android a las que apuntar.
+# 'armeabi-v7a' para dispositivos de 32 bits, 'arm64-v8a' para 64 bits.
+# Es buena práctica incluir ambas para máxima compatibilidad.
+android.archs = arm64-v8a, armeabi-v7a
 
-# (int) Mostrar warnings de buildozer
-warn_on_root = 1
+# (int) Número de procesos a usar para la compilación.
+# jobs = 1
 
-[android]
+# (bool) Habilitar el modo de depuración. Genera un APK debuggeable.
+debug = True
 
-# (bool) Habilitar AndroidX
-enable_androidx = True
+# (bool) Si es para lanzamiento (release = True) se necesita firmar el APK y otras configuraciones.
+# Para desarrollo y pruebas, déjalo en False.
+release = False
 
-# (list) Permisos de Android
-android.permissions = INTERNET,WRITE_EXTERNAL_STORAGE,READ_EXTERNAL_STORAGE
+# (str) Ruta a tu archivo keystore si estás construyendo una versión de lanzamiento.
+# android.release_keystore = ~/my-release-key.keystore
 
-# (str) NDK API que se usará
-android.ndk_api = 21
+# (str) Alias de la clave dentro del keystore.
+# android.release_keystore_alias = my_app_alias
 
-# (str) API mínima para que funcione tu app
-android.minapi = 21
+# (str) Contraseña para el keystore (sólo si se usa release_keystore).
+# android.release_keystore_pass = your_password
 
-# (str) API de destino de Android, debería ser tan alta como sea posible
-android.api = 33
+# (str) Contraseña para el alias (sólo si se usa release_keystore).
+# android.release_keyalias_pass = your_password
 
-# (str) Versión del NDK de Android
-android.ndk = 25b
+# (bool) Si se deben limpiar los directorios de compilación y las herramientas antes de compilar.
+# android.clean_build = True
 
-# (str) Versión del SDK de Android
-android.sdk = 33
+# (bool) Si Buildozer debe usar una caché para las dependencias (más rápido en compilaciones sucesivas).
+# android.use_setup_py = True
 
-# (bool) Usar --private data storage (True) o --dir public storage (False)
-android.private_storage = True
-
-# (str) Orientación (landscape, portrait o all)
-orientation = portrait
-
-# (bool) Indicar si la aplicación debería estar en pantalla completa o no
-fullscreen = 0
-
-# (str) Splash screen
-android.presplash_color = #FFFFFF
-
-# (str) Gradle dependencies
-android.gradle_dependencies = 
-
-# (str) Java build tool
-android.gradle_tool = gradle
-
-[buildozer:docker]
-# Si quieres usar Docker para compilar (recomendado para principiantes)
-# docker_build = 1
+# (bool) Incluir o no los libs locales. Si tu proyecto tiene módulos locales, déjalo en True.
+# android.add_local_libs = True
